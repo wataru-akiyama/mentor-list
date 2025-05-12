@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/mentor-list/static/css/main.d18e9fa4.css",
+    "main.js": "/mentor-list/static/js/main.eda21cfe.js",
+    "index.html": "/mentor-list/index.html",
+    "main.d18e9fa4.css.map": "/mentor-list/static/css/main.d18e9fa4.css.map",
+    "main.eda21cfe.js.map": "/mentor-list/static/js/main.eda21cfe.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.d18e9fa4.css",
+    "static/js/main.eda21cfe.js"
+  ]
+}

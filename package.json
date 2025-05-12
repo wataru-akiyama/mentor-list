@@ -2,7 +2,7 @@
   "name": "mentor-list-app",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://github.com/wataru-akiyama/mentor-list.git",
+  "homepage": "https://wataru-akiyama.github.io/mentor-list/",
   "dependencies": {
     "lucide-react": "^0.263.1",
     "react": "^18.2.0",

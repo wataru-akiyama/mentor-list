@@ -1,63 +1,11 @@
 // App.jsx - メインアプリケーションファイル
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, ChevronRight, ArrowLeft, Mail, Phone, MapPin, Briefcase, Tag, Heart } from 'lucide-react';
+import Papa from 'papaparse';
 import './index.css'; // Tailwind CSSのスタイル
 
-// サンプルデータ
-const MENTORS_DATA = [
-  {
-    id: 1,
-    name: '山田 太郎',
-    company: 'テクノロジー株式会社',
-    position: 'AIエンジニア',
-    fields: ['AI', 'プログラミング', 'データサイエンス'],
-    image: 'https://api.dicebear.com/7.x/initials/svg?seed=山田太郎',
-    description: 'AI技術を活用した新しいサービス開発に取り組んでいます。高校生の頃からプログラミングに興味を持ち、大学ではコンピュータサイエンスを専攻しました。',
-    supportTypes: ['オンライン相談', 'メール質問', '職場訪問'],
-    region: '東京',
-    email: 'yamada.taro@tech-company.jp',
-    phone: '03-1234-5678',
-  },
-  {
-    id: 2,
-    name: '佐藤 花子',
-    company: 'グリーンエネルギー研究所',
-    position: '環境研究員',
-    fields: ['環境科学', '再生可能エネルギー', '持続可能性'],
-    image: 'https://api.dicebear.com/7.x/initials/svg?seed=佐藤花子',
-    description: '地球環境問題に取り組む研究者です。特に再生可能エネルギーの普及や持続可能な社会づくりに関心があります。高校生との対話を通じて、若い世代の環境意識を高めたいと考えています。',
-    supportTypes: ['オンライン相談', 'メール質問'],
-    region: '京都',
-    email: 'hanako.sato@green-energy.org',
-    phone: '075-987-6543',
-  },
-  {
-    id: 3,
-    name: '鈴木 健太',
-    company: 'クリエイティブデザイン',
-    position: 'UIデザイナー',
-    fields: ['デザイン', 'UI/UX', 'アート'],
-    image: 'https://api.dicebear.com/7.x/initials/svg?seed=鈴木健太',
-    description: 'ユーザー体験を中心に考えたデザインを日々追求しています。使いやすく美しいインターフェースの設計を専門としています。',
-    supportTypes: ['メール質問', '職場訪問'],
-    region: '大阪',
-    email: 'kenta.suzuki@creative-design.com',
-    phone: '06-5432-1098',
-  },
-  {
-    id: 4,
-    name: '田中 美咲',
-    company: 'バイオテック研究所',
-    position: '研究員',
-    fields: ['生物学', '医療', 'バイオテクノロジー'],
-    image: 'https://api.dicebear.com/7.x/initials/svg?seed=田中美咲',
-    description: '最先端のバイオテクノロジー研究に携わっています。特に遺伝子編集技術に関する研究を行っており、将来の医療技術の進歩に貢献したいと考えています。',
-    supportTypes: ['オンライン相談', 'メール質問'],
-    region: '筑波',
-    email: 'misaki.tanaka@biotech-lab.jp',
-    phone: '029-876-5432',
-  },
-];
+// CSVファイルのURL
+const CSV_URL = 'https://wataru-akiyama.github.io/mentor-list/list.csv';
 
 // フィルターのオプション
 const FILTER_OPTIONS = [
@@ -80,7 +28,58 @@ const App = () => {
   const [favorites, setFavorites] = useState([]);
   const [activeTab, setActiveTab] = useState('search');
   const [searchQuery, setSearchQuery] = useState('');
-  const [mentors, setMentors] = useState(MENTORS_DATA);
+  const [mentors, setMentors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // CSVからメンターデータを読み込む
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        // CSVファイルを取得
+        const response = await fetch(CSV_URL);
+        const csvData = await response.text();
+        
+        // CSVをパース
+        Papa.parse(csvData, {
+          header: true, // 1行目をヘッダーとして使用
+          complete: (results) => {
+            // データを処理して構造化
+            const mentorsData = results.data
+              .filter(row => row.名前) // 空行を除外
+              .map((row, index) => ({
+                id: index + 1,
+                name: row.名前 || '',
+                company: row.会社 || '',
+                position: row.役職 || '',
+                // カンマで区切られた値を配列に変換
+                fields: (row.分野 || '').split(',').map(field => field.trim()),
+                // アバター画像
+                image: `https://api.dicebear.com/7.x/initials/svg?seed=${row.名前 || 'Unknown'}`,
+                description: row.自己紹介 || '',
+                supportTypes: (row.サポートタイプ || '').split(',').map(type => type.trim()),
+                region: row.地域 || '',
+                email: row.メール || '',
+                phone: row.電話 || '',
+              }));
+            
+            setMentors(mentorsData);
+            setLoading(false);
+          },
+          error: (error) => {
+            console.error('CSVデータの解析中にエラーが発生しました:', error);
+            setLoading(false);
+          }
+        });
+      } catch (error) {
+        console.error('CSVファイルの取得中にエラーが発生しました:', error);
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, []);
   
   // ローカルストレージからお気に入りを読み込む
   useEffect(() => {
@@ -127,19 +126,16 @@ const App = () => {
     setSearchQuery(query);
     
     if (!query.trim()) {
-      setMentors(MENTORS_DATA);
       return;
     }
     
     const lowercaseQuery = query.toLowerCase();
-    const filtered = MENTORS_DATA.filter(mentor => 
+    const filtered = mentors.filter(mentor => 
       mentor.name.toLowerCase().includes(lowercaseQuery) ||
       mentor.company.toLowerCase().includes(lowercaseQuery) ||
       mentor.position.toLowerCase().includes(lowercaseQuery) ||
       mentor.fields.some(field => field.toLowerCase().includes(lowercaseQuery))
     );
-    
-    setMentors(filtered);
   };
   
   // タブバーナビゲーション
@@ -326,64 +322,72 @@ const App = () => {
       </div>
       
       <div className="max-w-md mx-auto px-4 py-4">
-        <div className="flex justify-between items-center mb-3">
-          <p className="text-sm text-gray-500">{mentors.length}人のメンターが見つかりました</p>
-          <div className="flex space-x-1">
-            <button 
-              onClick={() => setActiveTab('search')}
-              className={`px-3 py-1 text-sm font-medium rounded-l-lg ${
-                activeTab === 'search' 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              検索
-            </button>
-            <button 
-              onClick={() => setActiveTab('favorites')}
-              className={`px-3 py-1 text-sm font-medium rounded-r-lg ${
-                activeTab === 'favorites' 
-                  ? 'bg-indigo-600 text-white' 
-                  : 'bg-gray-100 text-gray-800'
-              }`}
-            >
-              お気に入り
-            </button>
-          </div>
-        </div>
-        
-        {activeTab === 'search' ? (
-          <div className="space-y-3">
-            {mentors.length > 0 ? (
-              mentors.map(mentor => <MentorCard key={mentor.id} mentor={mentor} />)
-            ) : (
-              <div className="text-center py-12">
-                <Search size={48} className="mx-auto text-gray-300 mb-3" />
-                <h3 className="text-lg font-medium text-gray-700 mb-1">メンターが見つかりません</h3>
-                <p className="text-gray-500 text-sm mb-4">検索条件を変更してみてください</p>
-              </div>
-            )}
+        {loading ? (
+          <div className="text-center py-12">
+            <p className="text-gray-600">データを読み込み中...</p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {favorites.length > 0 ? (
-              MENTORS_DATA
-                .filter(mentor => favorites.includes(mentor.id))
-                .map(mentor => <MentorCard key={mentor.id} mentor={mentor} />)
-            ) : (
-              <div className="text-center py-12">
-                <Heart size={48} className="mx-auto text-gray-300 mb-3" />
-                <h3 className="text-lg font-medium text-gray-700 mb-1">お気に入りがありません</h3>
-                <p className="text-gray-500 text-sm mb-4">気になるメンターをお気に入り登録しましょう</p>
+          <>
+            <div className="flex justify-between items-center mb-3">
+              <p className="text-sm text-gray-500">{mentors.length}人のメンターが見つかりました</p>
+              <div className="flex space-x-1">
                 <button 
                   onClick={() => setActiveTab('search')}
-                  className="bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 transition duration-200"
+                  className={`px-3 py-1 text-sm font-medium rounded-l-lg ${
+                    activeTab === 'search' 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
                 >
-                  メンターを探す
+                  検索
+                </button>
+                <button 
+                  onClick={() => setActiveTab('favorites')}
+                  className={`px-3 py-1 text-sm font-medium rounded-r-lg ${
+                    activeTab === 'favorites' 
+                      ? 'bg-indigo-600 text-white' 
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  お気に入り
                 </button>
               </div>
+            </div>
+            
+            {activeTab === 'search' ? (
+              <div className="space-y-3">
+                {mentors.length > 0 ? (
+                  mentors.map(mentor => <MentorCard key={mentor.id} mentor={mentor} />)
+                ) : (
+                  <div className="text-center py-12">
+                    <Search size={48} className="mx-auto text-gray-300 mb-3" />
+                    <h3 className="text-lg font-medium text-gray-700 mb-1">メンターが見つかりません</h3>
+                    <p className="text-gray-500 text-sm mb-4">検索条件を変更してみてください</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {favorites.length > 0 ? (
+                  mentors
+                    .filter(mentor => favorites.includes(mentor.id))
+                    .map(mentor => <MentorCard key={mentor.id} mentor={mentor} />)
+                ) : (
+                  <div className="text-center py-12">
+                    <Heart size={48} className="mx-auto text-gray-300 mb-3" />
+                    <h3 className="text-lg font-medium text-gray-700 mb-1">お気に入りがありません</h3>
+                    <p className="text-gray-500 text-sm mb-4">気になるメンターをお気に入り登録しましょう</p>
+                    <button 
+                      onClick={() => setActiveTab('search')}
+                      className="bg-indigo-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-indigo-700 transition duration-200"
+                    >
+                      メンターを探す
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
-          </div>
+          </>
         )}
       </div>
       
